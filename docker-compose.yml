@@ -1,0 +1,176 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: voicecanvas-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-voicecanvas}
+      POSTGRES_USER: ${POSTGRES_USER:-voicecanvas}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voicecanvas_dev_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5442:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-voicecanvas}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voicecanvas-network
+
+  # Redis (Cache + Message Broker)
+  redis:
+    image: redis:7-alpine
+    container_name: voicecanvas-redis
+    ports:
+      - "6389:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - voicecanvas-network
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: voicecanvas-minio
+    command: server /data --console-address ":9002"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    ports:
+      - "9010:9000"  # API
+      - "9011:9002"  # Console
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - voicecanvas-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voicecanvas-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-voicecanvas}:${POSTGRES_PASSWORD:-voicecanvas_dev_password}@postgres:5432/${POSTGRES_DB:-voicecanvas}
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-dev_secret_key_change_in_production}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-15}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3010}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8010:8000"
+    volumes:
+      - ./backend:/app
+      - audio_cache:/app/cache
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - voicecanvas-network
+
+  # Celery Worker (procesamiento pesado)
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voicecanvas-worker
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-voicecanvas}:${POSTGRES_PASSWORD:-voicecanvas_dev_password}@postgres:5432/${POSTGRES_DB:-voicecanvas}
+      REDIS_URL: redis://redis:6379/0
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./backend:/app
+      - audio_cache:/app/cache
+    depends_on:
+      - postgres
+      - redis
+      - minio
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    networks:
+      - voicecanvas-network
+
+  # Celery Beat (tareas programadas - opcional)
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: voicecanvas-beat
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-voicecanvas}:${POSTGRES_PASSWORD:-voicecanvas_dev_password}@postgres:5432/${POSTGRES_DB:-voicecanvas}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A app.tasks.celery_app beat --loglevel=info
+    networks:
+      - voicecanvas-network
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: voicecanvas-frontend
+    ports:
+      - "3010:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:8010}
+      REACT_APP_WS_URL: ${REACT_APP_WS_URL:-ws://localhost:8010}
+      REACT_APP_ENVIRONMENT: ${REACT_APP_ENVIRONMENT:-development}
+    depends_on:
+      - backend
+    networks:
+      - voicecanvas-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  audio_cache:
+
+networks:
+  voicecanvas-network:
+    driver: bridge
