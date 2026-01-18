@@ -1,7 +1,7 @@
 """
 Voice processing endpoints.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
@@ -128,10 +128,15 @@ async def upload_voice(
     return VoiceResponse.from_orm(voice_recording)
 
 
+class ProcessVoiceRequest(BaseModel):
+    """Request model for voice processing."""
+    corrections: VoiceCorrections
+
+
 @router.post("/voice/process")
 async def process_voice(
-    voice_id: int,
-    corrections: VoiceCorrections,
+    voice_id: int = Query(..., description="Voice recording ID to process"),
+    request: Optional[ProcessVoiceRequest] = None,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -158,6 +163,12 @@ async def process_voice(
     voice.status = "processing"
     db.commit()
     
+    # Default corrections if not provided
+    if request is None or request.corrections is None:
+        corrections = VoiceCorrections()
+    else:
+        corrections = request.corrections
+    
     # Queue async task
     try:
         task = process_voice_audio_task.delay(
@@ -181,8 +192,8 @@ async def process_voice(
 
 @router.post("/voice/style-transfer")
 async def style_transfer(
-    voice_id: int,
-    style: str,
+    voice_id: int = Query(..., description="Voice recording ID"),
+    style: str = Query(..., description="Style to apply"),
     reference_audio: Optional[UploadFile] = File(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)

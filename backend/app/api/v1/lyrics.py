@@ -192,4 +192,4 @@ async def update_lyrics(
     db.commit()
     db.refresh(lyrics)
     
-    return lyrics
+    return LyricsResponse.from_orm(lyrics)

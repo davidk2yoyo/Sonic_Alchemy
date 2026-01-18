@@ -1,7 +1,7 @@
 """
 Canvas endpoints for image upload and emotion analysis.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Query
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.config import settings
@@ -123,7 +123,7 @@ async def upload_canvas(
 
 @router.post("/canvas/analyze", response_model=CanvasResponse)
 async def analyze_canvas(
-    canvas_id: int,
+    canvas_id: int = Query(..., description="Canvas ID to analyze"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -166,9 +166,9 @@ async def analyze_canvas(
 
 @router.post("/canvas/generate-music")
 async def generate_music(
-    canvas_id: int,
-    duration_seconds: int = 60,
-    style: Optional[str] = None,
+    canvas_id: int = Query(..., description="Canvas ID to generate music for"),
+    duration_seconds: int = Query(60, description="Duration in seconds"),
+    style: Optional[str] = Query(None, description="Music style"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
