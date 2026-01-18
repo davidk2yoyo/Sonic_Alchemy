@@ -39,6 +39,19 @@ class VoiceResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, obj: VoiceRecording):
+        """Convert VoiceRecording model to response."""
+        return cls(
+            id=obj.id,
+            raw_audio_url=obj.raw_audio_url,
+            processed_audio_url=obj.processed_audio_url,
+            style=obj.style,
+            status=obj.status,
+            duration_seconds=obj.duration_seconds,
+            created_at=obj.created_at.isoformat() if obj.created_at else ""
+        )
 
 
 @router.post("/voice/upload", response_model=VoiceResponse, status_code=status.HTTP_201_CREATED)
@@ -111,7 +124,8 @@ async def upload_voice(
     db.commit()
     db.refresh(voice_recording)
     
-    return voice_recording
+    # Convert to response model
+    return VoiceResponse.from_orm(voice_recording)
 
 
 @router.post("/voice/process")
@@ -256,4 +270,4 @@ async def get_voice(
                 detail="Access denied"
             )
     
-    return voice
+    return VoiceResponse.from_orm(voice)

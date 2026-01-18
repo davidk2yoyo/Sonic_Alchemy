@@ -1,7 +1,7 @@
 /**
  * WebSocket client for real-time communication.
  */
-const WS_URL = import.meta.env.REACT_APP_WS_URL || 'ws://localhost:8010';
+const WS_URL = (import.meta as any).env?.VITE_WS_URL || 'ws://localhost:8000';
 
 class WebSocketClient {
   private ws: WebSocket | null = null;

@@ -34,6 +34,18 @@ class LyricsResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, obj: Lyrics):
+        """Convert Lyrics model to response."""
+        return cls(
+            id=obj.id,
+            theme=obj.theme,
+            generated_lyrics=obj.generated_lyrics,
+            edited_lyrics=obj.edited_lyrics,
+            structure=obj.structure or {},
+            created_at=obj.created_at.isoformat() if obj.created_at else ""
+        )
 
 
 class UpdateLyricsRequest(BaseModel):
@@ -68,10 +80,33 @@ async def generate_lyrics(
             style=request.style
         )
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate lyrics: {str(e)}"
-        )
+        error_str = str(e)
+        # Check for quota/rate limit errors
+        if "429" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower():
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="You exceeded your current quota, please check your plan and billing"
+            )
+        elif "403" in error_str or "permission" in error_str.lower():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="API key permission denied. Please check your Gemini API key."
+            )
+        elif "401" in error_str or "unauthorized" in error_str.lower():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid API key. Please check your GEMINI_API_KEY in .env"
+            )
+        elif "503" in error_str or "service unavailable" in error_str.lower():
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service temporarily unavailable. Please try again later."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Failed to generate lyrics: {error_str}"
+            )
     
     # Create lyrics record
     lyrics = Lyrics(
@@ -85,7 +120,8 @@ async def generate_lyrics(
     db.commit()
     db.refresh(lyrics)
     
-    return lyrics
+    # Convert to response model
+    return LyricsResponse.from_orm(lyrics)
 
 
 @router.post("/lyrics/match")

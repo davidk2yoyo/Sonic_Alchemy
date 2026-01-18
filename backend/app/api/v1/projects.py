@@ -49,7 +49,16 @@ async def list_projects(
         Project.user_id == current_user.id
     ).offset(skip).limit(limit).all()
     
-    return projects
+    return [
+        ProjectResponse(
+            id=p.id,
+            title=p.title,
+            description=p.description,
+            created_at=p.created_at.isoformat() if p.created_at else "",
+            updated_at=p.updated_at.isoformat() if p.updated_at else ""
+        )
+        for p in projects
+    ]
 
 
 @router.post("/projects", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
@@ -69,7 +78,13 @@ async def create_project(
     db.commit()
     db.refresh(new_project)
     
-    return new_project
+    return ProjectResponse(
+        id=new_project.id,
+        title=new_project.title,
+        description=new_project.description,
+        created_at=new_project.created_at.isoformat() if new_project.created_at else "",
+        updated_at=new_project.updated_at.isoformat() if new_project.updated_at else ""
+    )
 
 
 @router.get("/projects/{project_id}", response_model=ProjectResponse)
@@ -90,7 +105,13 @@ async def get_project(
             detail="Project not found"
         )
     
-    return project
+    return ProjectResponse(
+        id=project.id,
+        title=project.title,
+        description=project.description,
+        created_at=project.created_at.isoformat() if project.created_at else "",
+        updated_at=project.updated_at.isoformat() if project.updated_at else ""
+    )
 
 
 @router.put("/projects/{project_id}", response_model=ProjectResponse)
@@ -120,7 +141,13 @@ async def update_project(
     db.commit()
     db.refresh(project)
     
-    return project
+    return ProjectResponse(
+        id=project.id,
+        title=project.title,
+        description=project.description,
+        created_at=project.created_at.isoformat() if project.created_at else "",
+        updated_at=project.updated_at.isoformat() if project.updated_at else ""
+    )
 
 
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

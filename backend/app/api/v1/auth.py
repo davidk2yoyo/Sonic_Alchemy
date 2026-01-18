@@ -114,10 +114,15 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
     }
 
 
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request model."""
+    refresh_token: str
+
+
 @router.post("/auth/refresh", response_model=dict)
-async def refresh_token(refresh_token: str):
+async def refresh_token(request: RefreshTokenRequest):
     """Refresh access token using refresh token."""
-    payload = decode_token(refresh_token)
+    payload = decode_token(request.refresh_token)
     
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(
@@ -140,7 +145,7 @@ async def refresh_token(refresh_token: str):
     }
 
 
-async def get_current_user(
+def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db)
 ) -> User:
@@ -173,4 +178,9 @@ async def get_current_user(
 @router.get("/auth/me", response_model=UserResponse)
 async def get_current_user_info(current_user: User = Depends(get_current_user)):
     """Get current user information."""
-    return current_user
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        username=current_user.username,
+        created_at=current_user.created_at.isoformat() if current_user.created_at else ""
+    )

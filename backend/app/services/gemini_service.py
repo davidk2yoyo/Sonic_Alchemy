@@ -14,8 +14,28 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Configure Gemini API
-genai.configure(api_key=settings.GEMINI_API_KEY)
+# Configure Gemini API - ensure it's loaded from env
+def _configure_gemini():
+    """Configure Gemini API with API key from settings."""
+    api_key = settings.GEMINI_API_KEY
+    if not api_key or len(api_key) < 20:
+        # Try loading from environment directly
+        import os
+        from dotenv import load_dotenv
+        from pathlib import Path
+        env_path = Path(__file__).parent.parent.parent.parent / ".env"
+        if env_path.exists():
+            load_dotenv(env_path, override=True)
+            api_key = os.getenv('GEMINI_API_KEY') or settings.GEMINI_API_KEY
+    
+    if api_key and len(api_key) > 20:
+        genai.configure(api_key=api_key)
+        logger.info("Gemini API configured successfully")
+    else:
+        logger.warning("GEMINI_API_KEY not found or invalid")
+
+# Configure on module load
+_configure_gemini()
 
 # Redis client for caching (if enabled)
 redis_client = None
@@ -243,8 +263,18 @@ Make the lyrics emotional, poetic, and suitable for music.
             return result
             
         except Exception as e:
+            error_str = str(e)
             logger.error(f"Error generating lyrics: {e}")
-            raise Exception(f"Failed to generate lyrics: {str(e)}")
+            
+            # Check for specific Gemini API errors
+            if "429" in error_str or "quota" in error_str.lower() or "rate limit" in error_str.lower():
+                raise Exception("429: You exceeded your current quota, please check your plan and billing")
+            elif "403" in error_str or "permission" in error_str.lower():
+                raise Exception("403: API key permission denied. Please check your Gemini API key.")
+            elif "401" in error_str or "unauthorized" in error_str.lower():
+                raise Exception("401: Invalid API key. Please check your GEMINI_API_KEY in .env")
+            else:
+                raise Exception(f"Failed to generate lyrics: {error_str}")
     
     def _parse_lyrics_structure(self, lyrics_text: str) -> Dict[str, Any]:
         """Parse lyrics text to extract structure."""

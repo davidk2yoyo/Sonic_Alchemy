@@ -3,10 +3,10 @@
  */
 import axios from 'axios';
 
-const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:8010';
+const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000';
 
 const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: `${API_URL}/api/v1`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,6 +17,10 @@ apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // Don't override Content-Type for FormData (multipart/form-data)
+  if (config.data instanceof FormData) {
+    delete config.headers['Content-Type'];
   }
   return config;
 });
@@ -34,4 +38,5 @@ apiClient.interceptors.response.use(
   }
 );
 
+export const api = apiClient;
 export default apiClient;

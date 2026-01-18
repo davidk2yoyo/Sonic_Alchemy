@@ -17,13 +17,20 @@ class StorageService:
     def __init__(self):
         """Initialize MinIO client."""
         try:
+            # Get endpoint, default to localhost if running outside Docker
+            endpoint = settings.MINIO_ENDPOINT
+            if endpoint == "minio:9000" or "minio:" in endpoint:
+                # Running locally, use localhost
+                endpoint = "localhost:9010"
+            
             self.client = Minio(
-                settings.MINIO_ENDPOINT,
+                endpoint,
                 access_key=settings.MINIO_ACCESS_KEY,
                 secret_key=settings.MINIO_SECRET_KEY,
                 secure=settings.MINIO_USE_SSL
             )
             self._ensure_buckets()
+            logger.info(f"MinIO client initialized with endpoint: {endpoint}")
         except Exception as e:
             logger.error(f"Failed to initialize MinIO client: {e}")
             self.client = None
@@ -69,6 +76,8 @@ class StorageService:
             file_obj = BytesIO(file_data)
             file_size = len(file_data)
             
+            logger.info(f"Uploading to bucket '{bucket_name}', object '{object_name}', size: {file_size} bytes")
+            
             self.client.put_object(
                 bucket_name,
                 object_name,
@@ -77,9 +86,29 @@ class StorageService:
                 content_type=content_type
             )
             
-            # Return object URL
-            url = f"{settings.MINIO_ENDPOINT}/{bucket_name}/{object_name}"
-            return url
+            logger.info(f"File uploaded successfully to MinIO")
+            
+            # Return object URL (use presigned URL for better access)
+            try:
+                from datetime import timedelta
+                url = self.client.presigned_get_object(
+                    bucket_name,
+                    object_name,
+                    expires=timedelta(hours=24)
+                )
+                logger.info(f"Generated presigned URL for {object_name}")
+                return url
+            except Exception as e:
+                logger.warning(f"Failed to generate presigned URL: {e}, using direct URL")
+                # Fallback to direct URL
+                endpoint = settings.MINIO_ENDPOINT
+                if endpoint == "minio:9000" or "minio:" in endpoint:
+                    endpoint = "localhost:9010"
+                # Use http:// for local development
+                protocol = "https://" if settings.MINIO_USE_SSL else "http://"
+                url = f"{protocol}{endpoint}/{bucket_name}/{object_name}"
+                logger.info(f"Using direct URL: {url}")
+                return url
             
         except S3Error as e:
             logger.error(f"Error uploading file: {e}")

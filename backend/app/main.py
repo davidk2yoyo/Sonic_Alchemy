@@ -1,10 +1,11 @@
 """
 Main FastAPI application entry point.
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api.v1 import auth, canvas, voice, lyrics, projects
+from app.websocket.collaboration import websocket_endpoint
 
 # Create FastAPI app
 app = FastAPI(
@@ -18,7 +19,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=settings.cors_origins_list + ["http://localhost:3010", "http://127.0.0.1:3010"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,3 +47,14 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy"}
+
+
+@app.websocket("/ws/project/{project_id}")
+async def websocket_route(websocket: WebSocket, project_id: int, token: str):
+    """WebSocket route for project collaboration."""
+    from app.core.database import SessionLocal
+    db = SessionLocal()
+    try:
+        await websocket_endpoint(websocket, project_id, token, db)
+    finally:
+        db.close()

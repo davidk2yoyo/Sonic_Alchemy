@@ -6,6 +6,13 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 from typing import List
 import os
+from pathlib import Path
+
+# Load .env from project root
+env_path = Path(__file__).parent.parent.parent / ".env"
+if env_path.exists():
+    from dotenv import load_dotenv
+    load_dotenv(env_path)
 
 
 class Settings(BaseSettings):
@@ -36,9 +43,9 @@ class Settings(BaseSettings):
     
     # Gemini API
     GEMINI_API_KEY: str = Field(default="")
-    GEMINI_MODEL_VISION: str = Field(default="gemini-pro-vision")
-    GEMINI_MODEL_AUDIO: str = Field(default="gemini-pro")
-    GEMINI_MODEL_TEXT: str = Field(default="gemini-pro")
+    GEMINI_MODEL_VISION: str = Field(default="gemini-2.5-flash")
+    GEMINI_MODEL_AUDIO: str = Field(default="gemini-2.5-flash")
+    GEMINI_MODEL_TEXT: str = Field(default="gemini-2.5-flash")
     GEMINI_RATE_LIMIT: int = Field(default=60)
     GEMINI_CACHE_ENABLED: bool = Field(default=True)
     
@@ -71,9 +78,12 @@ class Settings(BaseSettings):
     ALLOWED_AUDIO_FORMATS: str = Field(default="wav,mp3,m4a,ogg")
     
     class Config:
-        env_file = ".env"
+        # Load .env from project root (3 levels up: app/core/config.py -> app -> backend -> root)
+        env_file = str(Path(__file__).resolve().parent.parent.parent / ".env")
         env_file_encoding = "utf-8"
         case_sensitive = True
+        # Also try loading from current directory as fallback
+        extra = "ignore"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

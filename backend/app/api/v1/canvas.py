@@ -31,6 +31,18 @@ class CanvasResponse(BaseModel):
     
     class Config:
         from_attributes = True
+        
+    @classmethod
+    def from_orm(cls, obj: Canvas):
+        """Convert Canvas model to response."""
+        return cls(
+            id=obj.id,
+            image_url=obj.image_url,
+            emotion_analysis=obj.emotion_analysis or {},
+            generated_music_url=obj.generated_music_url,
+            status=obj.status,
+            created_at=obj.created_at.isoformat() if obj.created_at else ""
+        )
 
 
 @router.post("/canvas/upload", response_model=CanvasResponse, status_code=status.HTTP_201_CREATED)
@@ -64,14 +76,32 @@ async def upload_canvas(
     object_name = f"{current_user.id}/{uuid.uuid4()}/{file.filename}"
     
     # Upload to MinIO
+    import logging
+    logger = logging.getLogger(__name__)
     try:
+        logger.info(f"Uploading image to MinIO: {object_name}, size: {len(file_data)} bytes")
+        
+        if not storage_service.client:
+            logger.error("MinIO client is not initialized")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Storage service is not available"
+            )
+        
         image_url = storage_service.upload_file(
             bucket_name=settings.MINIO_BUCKET_IMAGES,
             object_name=object_name,
             file_data=file_data,
             content_type=file.content_type or "image/jpeg"
         )
+        logger.info(f"Image uploaded successfully, URL: {image_url[:100]}...")
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Failed to upload image to MinIO: {str(e)}", exc_info=True)
+        import traceback
+        error_trace = traceback.format_exc()
+        logger.error(f"Full traceback: {error_trace}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload image: {str(e)}"
@@ -88,7 +118,7 @@ async def upload_canvas(
     db.commit()
     db.refresh(canvas)
     
-    return canvas
+    return CanvasResponse.from_orm(canvas)
 
 
 @router.post("/canvas/analyze", response_model=CanvasResponse)
@@ -109,7 +139,7 @@ async def analyze_canvas(
     
     # Check if already analyzed
     if canvas.status == "analyzed" and canvas.emotion_analysis:
-        return canvas
+        return CanvasResponse.from_orm(canvas)
     
     # Update status
     canvas.status = "analyzing"
@@ -204,4 +234,4 @@ async def get_canvas(
                 detail="Access denied"
             )
     
-    return canvas
+    return CanvasResponse.from_orm(canvas)

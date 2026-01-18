@@ -23,4 +23,4 @@ class Canvas(Base):
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
-    project = relationship("Project", back_populates="canvas")
+    project = relationship("Project", foreign_keys=[project_id])

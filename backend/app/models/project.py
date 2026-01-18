@@ -19,13 +19,15 @@ class Project(Base):
     canvas_id = Column(Integer, ForeignKey("canvases.id", ondelete="SET NULL"), nullable=True)
     voice_recording_id = Column(Integer, ForeignKey("voice_recordings.id", ondelete="SET NULL"), nullable=True)
     lyrics_id = Column(Integer, ForeignKey("lyrics.id", ondelete="SET NULL"), nullable=True)
-    metadata = Column(JSON, default=dict)
+    project_metadata = Column(JSON, default=dict)  # Renamed from 'metadata' to avoid SQLAlchemy conflict
     is_public = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     
     # Relationships
     owner = relationship("User", back_populates="projects")
-    canvas = relationship("Canvas", back_populates="project", uselist=False)
-    voice_recording = relationship("VoiceRecording", back_populates="project", uselist=False)
-    lyrics = relationship("Lyrics", back_populates="project", uselist=False)
+    # Note: Canvas, VoiceRecording, and Lyrics have project_id FK to projects.id
+    # We use viewonly=True to avoid circular relationship issues
+    canvas = relationship("Canvas", foreign_keys=[canvas_id], uselist=False, viewonly=True)
+    voice_recording = relationship("VoiceRecording", foreign_keys=[voice_recording_id], uselist=False, viewonly=True)
+    lyrics = relationship("Lyrics", foreign_keys=[lyrics_id], uselist=False, viewonly=True)
