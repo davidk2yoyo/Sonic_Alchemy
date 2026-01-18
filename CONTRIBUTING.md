@@ -195,16 +195,16 @@ This project follows the AI-Driven Development Lifecycle (AI-DLC) methodology:
 
 ### Workflow Integration
 
-- **Before coding**: Ensure requirements are documented in `requirements.md`
-- **Design decisions**: Reference `design.md` and `ARCHITECTURE.md`
-- **Technical constraints**: Follow `STEERING.md`
+- **Before coding**: Ensure requirements are documented in `docs/requirements/requirements.md`
+- **Design decisions**: Reference `docs/architecture/design.md` and `docs/architecture/ARCHITECTURE.md`
+- **Technical constraints**: Follow `docs/development/steering.md`
 - **Updating Specs**: Update relevant Spec files if requirements change
 
 ### Linking PRs to Specs
 
 When creating a PR:
-- Link to related requirements in `requirements.md`
-- Reference design decisions from `design.md`
+- Link to related requirements in `docs/requirements/requirements.md`
+- Reference design decisions from `docs/architecture/design.md`
 - Ensure Specs are updated before merging if requirements changed
 
 ## Development Setup

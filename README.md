@@ -140,11 +140,15 @@ Sonic_Alchemy/
 ├── .github/           # GitHub templates and workflows
 ├── backend/           # FastAPI backend
 ├── frontend/          # React frontend
+├── docs/              # Project documentation
+│   ├── architecture/  # Architecture and design docs
+│   ├── requirements/  # Requirements specifications
+│   ├── database/      # Database schema and migrations
+│   ├── api/           # API documentation
+│   ├── development/   # Development guidelines
+│   └── deployment/    # Deployment guides
 ├── docker-compose.yml # Docker services configuration
-├── requirements.md    # AI-DLC requirements specification
-├── design.md          # Technical design document
-├── STEERING.md        # Technical constraints
-└── ARCHITECTURE.md    # Architecture decisions
+└── CONTRIBUTING.md    # Contribution guidelines
 ```
 
 ## Environment Variables
@@ -162,6 +166,17 @@ Key environment variables (see `.env.example` for full list):
 Once the backend is running, visit:
 - API docs: http://localhost:8010/docs
 - ReDoc: http://localhost:8010/redoc
+
+## Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- [Architecture](docs/architecture/ARCHITECTURE.md) - System architecture
+- [Requirements](docs/requirements/requirements.md) - Feature requirements
+- [Database Schema](docs/database/schema.md) - Database design
+- [API Documentation](docs/api/README.md) - REST API and WebSocket
+- [Development Guide](docs/development/steering.md) - Coding standards
+- [Deployment Guide](docs/deployment/README.md) - Production deployment
 
 ## Contributing
 
