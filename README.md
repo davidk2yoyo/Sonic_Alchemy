@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sonic Alchemy
 
-## Getting Started
+**Multimodal AI Music Creation Studio** built for the Gemini 3 Global Hackathon.
 
-First, run the development server:
+Sonic Alchemy transforms visual and vocal intent into musical gold. Using Gemini 3 as the reasoning engine and Tone.js for real-time synthesis, it bridges the gap between raw emotion and musical production.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- **Emotion Canvas**: Draw or upload an image. Gemini analyzes the visual "mood" and generates structured musical parameters (tempo, key, scale, instruments) to drive a live synth.
+- **Voice Alchemy**: Record a hum or a "bad" vocal take. Gemini infers the intended melody and rhythmic structure, providing guidance for pitch correction and timing.
+- **Lyric Composer**: Enter a theme or emotion. Gemini generates rhyming lyrics with syllable-to-melody alignment for synchronized display.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠 Tech Stack
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Frontend**: Next.js 14 (App Router)
+- **UI**: Tailwind CSS, GSAP (animations), Framer Motion (transitions), shadcn/ui
+- **Canvas**: P5.js
+- **Audio Engine**: Tone.js + Web Audio API
+- **AI Engine**: Gemini 1.5 Flash (via Google Generative AI SDK)
 
-## Learn More
+## 📦 Getting Started
 
-To learn more about Next.js, take a look at the following resources:
+1. **Clone & Install**:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+   ```bash
+   npm install
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+2. **Environment Variables**:
+   Create a `.env.local` file based on `.env.local.example` and add your Gemini API Key:
 
-## Deploy on Vercel
+   ```env
+   NEXT_PUBLIC_GEMINI_API_KEY=your_key_here
+   ```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+3. **Run Locally**:
+   ```bash
+   npm run dev
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🎭 Gemini 3 Integration
+
+Gemini serves as the **Multimodal Reasoning Core**:
+
+- **Vision**: Interprets drawing strokes and image colors into emotional musicality.
+- **Audio reasoning**: Decipher "intent" from human voice recordings, ignoring technical singing flaws to find the underlying melody.
+- **Creative Writing**: Generates rhythm-aligned lyrics that match the inferred musical parameters.
+
+---
+
+Built with ❤️ for the Gemini 3 Global Hackathon.
